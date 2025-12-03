@@ -89,14 +89,59 @@ app.get('/', (req, res) => {
 });
 
 // --- LÓGICA DO BOT ---
-if (!MONGO_URI) { console.error("Sem MONGO_URI"); } 
+if (!MONGO_URI) { 
+    console.error("❌ ERRO CRÍTICO: Sem MONGO_URI no Environment!"); 
+} 
 else {
-    mongoose.connect(MONGO_URI).then(() => {
+    console.log("🔄 Tentando conectar ao MongoDB..."); // LOG DE DEBUG
+
+    mongoose.connect(MONGO_URI)
+    .then(() => {
+        console.log("✅ Conectado ao MongoDB! Iniciando o Bot..."); // SUCESSO
+        
         const store = new MongoStore({ mongoose: mongoose });
         const client = new Client({
             authStrategy: new RemoteAuth({ store: store, backupSyncIntervalMs: 60000 }),
-            puppeteer: { args: ['--no-sandbox', '--disable-setuid-sandbox'], headless: true }
+            puppeteer: { 
+                args: ['--no-sandbox', '--disable-setuid-sandbox'],
+                headless: true 
+            }
         });
+
+        // ... O RESTO DO CÓDIGO DO CLIENTE CONTINUA IGUAL AQUI ...
+        // (Copie as rotas app.post e client.on que já estavam no seu código)
+        // Vou deixar resumido aqui para você saber onde encaixar, mas mantenha suas funções de sorteio/figurinhas
+
+        app.post('/api/enviar', async (req, res) => {
+             // ... seu código de enviar ...
+             let { numero, mensagem } = req.body;
+             if (!numero.includes('@')) numero = `${numero}@c.us`;
+             await client.sendMessage(numero, mensagem);
+             res.redirect('/');
+        });
+        
+        // ... (Mantenha as outras rotas do site aqui) ...
+
+        client.on('message', async (msg) => {
+            // ... (Mantenha seus comandos de /sticker, /sorteio aqui) ...
+            if (msg.body === '!ping') msg.reply('pong'); // Exemplo
+        });
+
+        client.on('qr', (qr) => {
+            console.log('QR Code recebido! Escaneie nos logs.');
+            qrcode.generate(qr, { small: true });
+        });
+
+        client.on('ready', () => { console.log('✅ Bot Online e Pronto!'); });
+        
+        client.initialize();
+    })
+    .catch((erro) => {
+        console.error("❌ ERRO AO CONECTAR NO BANCO:", erro); // AQUI VAI MOSTRAR O PROBLEMA
+    });
+}
+
+app.listen(port, () => { console.log(`Site rodando na porta ${port}`); });
 
         // --- API DO SITE (RECEBE OS CLIQUES DOS BOTÕES) ---
         
